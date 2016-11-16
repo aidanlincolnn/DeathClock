@@ -233,8 +233,7 @@ void calculateExpectancy() {
 
 
 void youreDead() {
-  // note durations: 4 = quarter note, 8 = eighth note, etc.:
-  int noteDurations[] = {
+  int noteLengths[] = {
     4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
     4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
     4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
@@ -245,8 +244,7 @@ void youreDead() {
     4, 4, 2, 4, 2, 4, 3, 6, 5, 4, 4
   };
 
-  // notes in the melody:
-  int melody[] = {
+  int song[] = {
     NOTE_C4, NOTE_C4, NOTE_E5, NOTE_G5, NOTE_G5, 0, NOTE_G6, NOTE_G6,0, NOTE_E6, NOTE_E6,0,
     NOTE_C4, NOTE_C4, NOTE_E5, NOTE_G5, NOTE_G5, 0, NOTE_G6, NOTE_G6,0, NOTE_F6, NOTE_F6,0,
     NOTE_B4, NOTE_B4, NOTE_D5, NOTE_A6, NOTE_A6, 0, NOTE_A7, NOTE_A7,0, NOTE_F6, NOTE_F6,0,
@@ -257,11 +255,10 @@ void youreDead() {
     NOTE_C5, NOTE_E4, NOTE_E4, NOTE_D4, NOTE_A5, NOTE_G4,NOTE_C4, 0,NOTE_C4, NOTE_C4, NOTE_C4
   };
   
-  for (int thisNote = 0; thisNote < 91; thisNote++) {
-    int noteDuration = 1000 / noteDurations[thisNote];
-    tone(10, melody[thisNote], noteDuration);
-    int pauseBetweenNotes = noteDuration * 1.30;
-    delay(pauseBetweenNotes);
+  for (int currenNote = 0; currenNote < 91; currenNote++) {
+    int noteLength = 1000 / noteLengths[currenNote];
+    tone(10, song[currenNote], noteLength);
+    delay(noteLength * 1.25);
     noTone(10);
   }
 }
