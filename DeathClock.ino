@@ -46,6 +46,13 @@ void setup()
 
 void loop()
 { 
+  startOrResetClock();
+  adjustDisplayBrightness(); 
+  updateTime();
+  delay(250);
+}
+
+void startOrResetClock(){
   int resetButton = digitalRead(buttonOne);
   if (resetButton == LOW || firstRun) {
     //hold button for 5 seconds to reset clock and re-enter dates
@@ -65,10 +72,6 @@ void loop()
       calculateExpectancy(); 
     }
   }
- 
-  adjustDisplayBrightness(); 
-  updateTime();
-  delay(250);
 }
 
 void adjustDisplayBrightness(){
