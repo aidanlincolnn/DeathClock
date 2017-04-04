@@ -1,3 +1,14 @@
+/*
+ * Death Clock 
+ * 3/11/2017
+ * Aidan Fowler
+ * 
+ * Step 1: Input Your Birthday
+ * Step 2: Input The Current Date
+ * Step 3: Input Your Gender
+ * Step 4: Watch Clock Count Down In Minutes Until Your Death
+ * Bonus: Special Song When You Hit 00000000s
+ */
 #include "LedControl.h"
 #include "elapsedMillis.h"
 #include "binary.h"
@@ -6,11 +17,14 @@
 int buttonOne = 2;
 int buttonTwo = 3;
 int buttonThree = 4;
+int brightNess = 15;
 long minutes = 0;
 boolean boy = true;
 unsigned long delaytime=250;
+boolean timeSet = false;
 boolean firstRun = true;
 boolean firstClockSet = true;
+boolean playSound = false;
 long minutesLived = 0;
 // Arduino Pin 7 to DIN, 9 to Clk, 8 to LOAD, no.of devices is 1
 LedControl lc = LedControl(7, 9, 8, 1);
@@ -30,14 +44,56 @@ void setup()
 }
 
 void loop()
-{
-  int buttonValue = digitalRead(buttonOne);
-  if (buttonValue == LOW || firstRun) {
-    firstRun = false;
-    enterDates();
-    enterSex();
-    calculateExpectancy(); 
+{ 
+  int resetButton = digitalRead(buttonOne);
+  if (resetButton == LOW || firstRun) {
+    //hold button for 5 seconds to reset clock and re-enter dates
+    if(!firstRun){
+      delay(5000);
+    }
+    if(resetButton == LOW || firstRun){ 
+      minutes = 0;
+      boy = true;
+      firstClockSet = true;
+      minutesLived = 0;
+      brightNess = 15;
+      playSound = false;
+      firstRun = false;
+      enterDates();
+      enterSex();
+      calculateExpectancy(); 
+    }
   }
+  
+  if(digitalRead(buttonTwo)==LOW && digitalRead(buttonThree)==LOW){
+    Serial.println("up in here");
+    if(brightNess == -5){
+      lc.setDigit(0, 7, (byte) (int) ((minutes / 10000000) % 10), false);
+      lc.setDigit(0, 6, (byte) (int) ((minutes / 1000000) % 10), false);
+      lc.setDigit(0, 5, (byte) (int) ((minutes / 100000) % 10), false);
+      lc.setDigit(0, 4, (byte) (int) ((minutes / 10000) % 10), false);
+      lc.setDigit(0, 3, (byte) (int) ((minutes / 1000) % 10), false);
+      lc.setDigit(0, 2, (byte) (int) ((minutes / 100) % 10), false);
+      lc.setDigit(0, 1, (byte) (int) ((minutes / 10) % 10), false);
+      lc.setDigit(0, 0, (byte) (int) (minutes % 10), false);
+      brightNess = 20;
+    }
+    brightNess -= 5;
+    if(brightNess == -5){
+      lc.setRow(0,0,B00000000);
+      lc.setRow(0,1,B00000000);
+      lc.setRow(0,2,B00000000);
+      lc.setRow(0,3,B00000000);
+      lc.setRow(0,4,B00000000);
+      lc.setRow(0,5,B00000000);
+      lc.setRow(0,6,B00000000);
+      lc.setRow(0,7,B00000000);
+    }
+    Serial.println(brightNess);
+    lc.setIntensity(0, brightNess); // Set brightness level (0 is min, 15 is max)
+    delay(250);
+  }
+  
   updateTime();
   delay(250);
 }
@@ -48,15 +104,16 @@ void updateTime() {
       firstClockSet = false;
       minutes--;
       timeElapsed = 0;
-      lc.setDigit(0, 7, (byte) (minutes / 10000000) % 10, false);
-      lc.setDigit(0, 6, (byte) (minutes / 1000000) % 10, false);
-      lc.setDigit(0, 5, (byte) (minutes / 100000) % 10, false);
-      lc.setDigit(0, 4, (byte) (minutes / 10000) % 10, false);
-      lc.setDigit(0, 3, (byte) (minutes / 1000) % 10, false);
-      lc.setDigit(0, 2, (byte) (minutes / 100) % 10, false);
-      lc.setDigit(0, 1, (byte) (minutes / 10) % 10, false);
-      lc.setDigit(0, 0, (byte) minutes % 10, false);
-      if(minutes == 0){
+      lc.setDigit(0, 7, (byte) (int) ((minutes / 10000000) % 10), false);
+      lc.setDigit(0, 6, (byte) (int) ((minutes / 1000000) % 10), false);
+      lc.setDigit(0, 5, (byte) (int) ((minutes / 100000) % 10), false);
+      lc.setDigit(0, 4, (byte) (int) ((minutes / 10000) % 10), false);
+      lc.setDigit(0, 3, (byte) (int) ((minutes / 1000) % 10), false);
+      lc.setDigit(0, 2, (byte) (int) ((minutes / 100) % 10), false);
+      lc.setDigit(0, 1, (byte) (int) ((minutes / 10) % 10), false);
+      lc.setDigit(0, 0, (byte) (int) (minutes % 10), false);
+      if(minutes == 0 || playSound == true){
+        minutes = 0;
         youreDead();
       }
     }
@@ -78,14 +135,14 @@ int getNumberInput(int field, String refreshType){
       else if (refreshType == "Year"){
          updateYearDisplay(field, NULL, NULL);
       }
-      delay(delaytime*4);
+      delay(delaytime*2);
       first = false;
     }
-    int startButton = digitalRead(buttonOne);
+    int enterButton = digitalRead(buttonOne);
     int upButton = digitalRead(buttonTwo);
     int downButton = digitalRead(buttonThree);
     
-    if (startButton == LOW) {
+    if (enterButton == LOW) {
       exitLoop = true;
     }
     else if (upButton == LOW) {
@@ -133,6 +190,7 @@ int getNumberInput(int field, String refreshType){
 }
 
 void enterDates(){
+  birth();
   int month = getNumberInput(6, "Month");
   int day = getNumberInput(15, "Day");
   int year = getNumberInput(1990, "Year");
@@ -143,10 +201,14 @@ void enterDates(){
   delay(delaytime * 8);
   lc.clearDisplay(0);
   delay(delaytime * 2);
-  
+
+  today();
   int month2 = getNumberInput(6, "Month");
   int day2 = getNumberInput(15, "Day");
-  int year2 = getNumberInput(2016, "Year");
+  int year2 = getNumberInput(2017, "Year");
+  if(year2 == 2000 && month2 ==1 && day2 == 1){
+    playSound = true;
+  }
 
   lc.clearDisplay(0);
   delay(delaytime * 2);
@@ -155,11 +217,10 @@ void enterDates(){
   lc.clearDisplay(0);
   delay(delaytime * 2);
 
-  int yearDiff = year2-year;
-  int monthDiff = month2-month;
-  int dayDiff = day2-day;
-  minutesLived = (yearDiff*365 + monthDiff*30.35 + dayDiff)*24*60;
-  Serial.println(minutesLived);
+  long yearDiff = year2-year;
+  long monthDiff = month2-month;
+  long dayDiff = day2-day;
+  minutesLived = (long) (yearDiff*365 + monthDiff*30.35 + dayDiff)*24*60;
 }
 
 
@@ -187,16 +248,16 @@ void enterSex(){
   boolean enterSex = true;
   
   while(enterSex){
-      int buttonValue = digitalRead(buttonOne);
-      int button2Value = digitalRead(buttonTwo);
-      int button3Value = digitalRead(buttonThree);
+      int startButton = digitalRead(buttonOne);
+      int upButton = digitalRead(buttonTwo);
+      int downButton = digitalRead(buttonThree);
       
-      if (buttonValue == LOW) {
+      if (startButton == LOW) {
         lc.clearDisplay(0);
         enterSex = false;
         break;
       }
-      else if (button2Value == LOW || button3Value == LOW) {
+      else if (upButton == LOW || downButton == LOW) {
         boy = !boy;
         updateGenderDisplay();
       }
@@ -206,14 +267,17 @@ void enterSex(){
 
 void updateGenderDisplay(){
   lc.clearDisplay(0);
-  lc.setDigit(0,6,8,false);
-  lc.setDigit(0,5,0,false);
-  lc.setRow(0,4,B00111011);
+  lc.setDigit(0,7,5,false);
+  lc.setChar(0,6,'E',false);
+  lc.setRow(0,5,B00110111);
+  lc.setRow(0,4,B00000001);
   if(boy){
+    lc.setRow(0,1,B00110111);
     lc.setRow(0,0,B00111011);
   }
   else{
-    lc.setRow(0,0,B00010101);
+    lc.setRow(0,1,B00110111);
+    lc.setRow(0,0,B00110111);
   }
   delay(delaytime);
 }
@@ -225,14 +289,46 @@ void calculateExpectancy() {
    base = 39449700;
   }
   minutes = base - minutesLived;
-  if (minutes < 0){
-    minutes = 2;
+  //minimum give the clock 1 year of minutes
+  if (minutes < 0 || minutesLived < 0){
+    minutes = 525600;
   }
   timeElapsed = 0;
 }
 
+void birth(){
+  Serial.println("birth");
+  lc.clearDisplay(0);
+  lc.setRow(0,7,B00011111);
+  lc.setRow(0,6,B00110000);
+  lc.setRow(0,5,B01000110);
+  lc.setRow(0,4,B00001111);
+  lc.setRow(0,3,B00010111);
+  lc.setRow(0,2,B00000001);
+  lc.setRow(0,1,B00000000);
+  lc.setRow(0,0,B00000000);
+  delay(delaytime * 8);
+  lc.clearDisplay(0);
+}
+
+void today(){
+  lc.clearDisplay(0);
+  lc.setRow(0,7,B00001111);
+  lc.setRow(0,6,B00011101);
+  lc.setRow(0,5,B00111101);
+  lc.setRow(0,4,B01111101);
+  lc.setRow(0,3,B00111011);
+  lc.setRow(0,2,B00000001);
+  lc.setRow(0,1,B00000000);
+  lc.setRow(0,0,B00000000);
+  delay(delaytime * 8);
+  lc.clearDisplay(0); 
+}
+
 
 void youreDead() {
+  lc.clearDisplay(0);
+  wasIt();
   int noteLengths[] = {
     4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
     4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
@@ -254,13 +350,97 @@ void youreDead() {
     NOTE_D4, NOTE_D4, NOTE_F4, NOTE_A5, NOTE_A5, NOTE_FS4, NOTE_G4,NOTE_E6,
     NOTE_C5, NOTE_E4, NOTE_E4, NOTE_D4, NOTE_A5, NOTE_G4,NOTE_C4, 0,NOTE_C4, NOTE_C4, NOTE_C4
   };
-  
+
   for (int currenNote = 0; currenNote < 91; currenNote++) {
+    if (currenNote == 18){
+      worth();
+    }
+    else if (currenNote == 30){
+      it();
+    }
+    else if (currenNote == 42){
+      question();
+    }
+    else if(currenNote == 88 || currenNote == 89){
+      flicker();
+    }
+    else if(currenNote == 90){
+      off();
+    }
     int noteLength = 1000 / noteLengths[currenNote];
     tone(10, song[currenNote], noteLength);
     delay(noteLength * 1.25);
     noTone(10);
   }
+}
+
+void wasIt(){
+    lc.clearDisplay(0);
+    lc.setRow(0,7,B00011110);
+    lc.setRow(0,6,B00111100);
+    lc.setRow(0,5,B01111101);
+    lc.setRow(0,4,B01011011);
+    lc.setRow(0,3,B00000000);
+    lc.setRow(0,2,B00110000);
+    lc.setRow(0,1,B00001111);
+    lc.setRow(0,0,B00000000);
+}
+
+void worth(){
+    lc.clearDisplay(0); 
+    lc.setRow(0,7,B00011110);
+    lc.setRow(0,6,B00111100);
+    lc.setRow(0,5,B00011101);
+    lc.setRow(0,4,B01000110);
+    lc.setRow(0,3,B00001111);
+    lc.setRow(0,2,B00010111);
+    lc.setRow(0,1,B00000000);
+    lc.setRow(0,0,B00000000);
+}
+
+void it(){
+    lc.clearDisplay(0); 
+    lc.setRow(0,7,B00110000);
+    lc.setRow(0,6,B00001111);
+    lc.setRow(0,5,B00000000);
+    lc.setRow(0,4,B00000000);
+    lc.setRow(0,3,B00000000);
+    lc.setRow(0,2,B00000000);
+    lc.setRow(0,1,B00000000);
+    lc.setRow(0,0,B00000000);
+}
+
+void question(){
+    lc.clearDisplay(0); 
+    lc.setRow(0,7,B00000000);
+    lc.setRow(0,6,B00000000);
+    lc.setRow(0,5,B00000000);
+    lc.setRow(0,4,B00000000);
+    lc.setRow(0,3,B00000000);
+    lc.setRow(0,2,B00000000);
+    lc.setRow(0,1,B10000000);
+    lc.setRow(0,0,B01100101);
+}
+
+void flicker(){
+    lc.clearDisplay(0); 
+    delay(50);
+    question();
+    delay(50);
+    lc.clearDisplay(0);
+    question();
+}
+
+void off(){
+    lc.clearDisplay(0); 
+    lc.setRow(0,7,B00000000);
+    lc.setRow(0,6,B00000000);
+    lc.setRow(0,5,B00000000);
+    lc.setRow(0,4,B00000000);
+    lc.setRow(0,3,B00000000);
+    lc.setRow(0,2,B00000000);
+    lc.setRow(0,1,B00000000);
+    lc.setRow(0,0,B00000000);
 }
 
 
