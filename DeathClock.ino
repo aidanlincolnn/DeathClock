@@ -7,8 +7,9 @@
  * Step 2: Input The Current Date
  * Step 3: Input Your Gender
  * Step 4: Watch Clock Count Down In Minutes Until Your Death
- * Bonus: Special Song When You Hit 00000000s
+ * End of life: Plays A Song When You Hit 00000000s
  */
+ 
 #include "LedControl.h"
 #include "elapsedMillis.h"
 #include "binary.h"
@@ -64,9 +65,14 @@ void loop()
       calculateExpectancy(); 
     }
   }
-  
+ 
+  adjustDisplayBrightness(); 
+  updateTime();
+  delay(250);
+}
+
+void adjustDisplayBrightness(){
   if(digitalRead(buttonTwo)==LOW && digitalRead(buttonThree)==LOW){
-    Serial.println("up in here");
     if(brightNess == -5){
       lc.setDigit(0, 7, (byte) (int) ((minutes / 10000000) % 10), false);
       lc.setDigit(0, 6, (byte) (int) ((minutes / 1000000) % 10), false);
@@ -93,9 +99,6 @@ void loop()
     lc.setIntensity(0, brightNess); // Set brightness level (0 is min, 15 is max)
     delay(250);
   }
-  
-  updateTime();
-  delay(250);
 }
 
 void updateTime() {
